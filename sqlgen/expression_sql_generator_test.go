@@ -244,6 +244,10 @@ func (esgs *expressionSQLGeneratorSuite) TestGenerate_TimeTypes() {
 		time.Now().In(asiaShanghai),
 	}
 
+	originalConvert := convertTimeToUTC
+
+	ConvertTimeToUTC(false)
+	// non time
 	for _, n := range testDatas {
 		now := n
 		esgs.assertCases(
@@ -255,11 +259,26 @@ func (esgs *expressionSQLGeneratorSuite) TestGenerate_TimeTypes() {
 			expressionTestCase{val: &now, sql: "?", isPrepared: true, args: []interface{}{now}},
 		)
 	}
+
+	ConvertTimeToUTC(true)
+	// utc time
+	for _, n := range testDatas {
+		now := n
+		esgs.assertCases(
+			NewExpressionSQLGenerator("test", DefaultDialectOptions()),
+			expressionTestCase{val: now, sql: "'" + now.UTC().Format(time.RFC3339Nano) + "'"},
+			expressionTestCase{val: now, sql: "?", isPrepared: true, args: []interface{}{now}},
+
+			expressionTestCase{val: &now, sql: "'" + now.UTC().Format(time.RFC3339Nano) + "'"},
+			expressionTestCase{val: &now, sql: "?", isPrepared: true, args: []interface{}{now}},
+		)
+	}
 	esgs.assertCases(
 		NewExpressionSQLGenerator("test", DefaultDialectOptions()),
 		expressionTestCase{val: nt, sql: "NULL"},
 		expressionTestCase{val: nt, sql: "?", isPrepared: true, args: []interface{}{nil}},
 	)
+	ConvertTimeToUTC(originalConvert)
 }
 
 func (esgs *expressionSQLGeneratorSuite) TestGenerate_NilTypes() {

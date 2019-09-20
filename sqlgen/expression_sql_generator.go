@@ -273,6 +273,9 @@ func (esg *expressionSQLGenerator) literalTime(b sb.SQLBuilder, t time.Time) {
 		esg.placeHolderSQL(b, t)
 		return
 	}
+	if convertTimeToUTC {
+		t = t.UTC()
+	}
 	esg.Generate(b, t.Format(esg.dialectOptions.TimeFormat))
 }
 
