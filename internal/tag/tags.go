@@ -47,7 +47,7 @@ func (t Tag) IsNamed() bool {
 	}
 	return false
 }
-func (t Tag) Skip() bool {
+func (t Tag) Ignore() bool {
 	if t.name == "-" {
 		return true
 	}
@@ -57,13 +57,16 @@ func (t Tag) IsEmpty() bool {
 	return len(t.tag) == 0
 }
 
-func (t Tag) Has(optionName string) bool {
+// ContainsOption reports whether a comma-separated list of options
+// contains a particular substr flag. substr must be surrounded by a
+// string boundary or commas.
+func (t Tag) ContainsOption(optionName string) bool {
 	return t.options.Contains(optionName)
 }
-func (t Tag) Values() Options {
-	return t.values()
+func (t Tag) Options() Options {
+	return t.options
 }
-func (t Tag) values() []string {
+func (t Tag) Values() []string {
 	tags := strings.Split(t.tag, ",")
 	for i, tag := range tags {
 		tags[i] = strings.TrimSpace(tag)

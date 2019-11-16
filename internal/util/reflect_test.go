@@ -2,6 +2,7 @@ package util
 
 import (
 	"database/sql"
+	"fmt"
 	"reflect"
 	"strings"
 	"sync"
@@ -81,6 +82,10 @@ type (
 
 func (t TestInterfaceImpl) A() string {
 	return t.str
+}
+func (rt *reflectTest) SetupTest() {
+	// reset the default annotation before each test
+	SetAnnotation(true)
 }
 
 type reflectTest struct {
@@ -613,7 +618,7 @@ func (rt *reflectTest) TestAssignStructVals_withStructWithEmbeddedStructWithMult
 		End string
 	}
 	type EmbeddedStruct struct {
-		Follow Follow `db:",follow"`
+		Follow Follow `goqu:"follow"`
 		Str    string
 	}
 	type TestStruct struct {
@@ -815,6 +820,196 @@ func (rt *reflectTest) TestAssignStructVals_withStructWithTaggedPointerField() {
 		Int:      10,
 		Bool:     true,
 		Valuer:   ns,
+	})
+}
+func (rt *reflectTest) TestAssignStructVals_withStructWithAnonEmbeddedStructAnnotationOff() {
+
+	SetAnnotation(false)
+
+	type EmbeddedStruct struct {
+		Str string
+	}
+	type TestStruct struct {
+		EmbeddedStruct
+		Int    int64
+		Bool   bool
+		Valuer *sql.NullString
+	}
+	var ts TestStruct
+	cm, err := GetColumnMap(&ts)
+	rt.NoError(err)
+	ns := &sql.NullString{String: "null_str1", Valid: true}
+	data := map[string]interface{}{
+		"str":    "string",
+		"int":    int64(10),
+		"bool":   true,
+		"valuer": &ns,
+	}
+	AssignStructVals(&ts, data, cm)
+	rt.Equal(ts, TestStruct{
+		EmbeddedStruct: EmbeddedStruct{Str: "string"},
+		Int:            10,
+		Bool:           true,
+		Valuer:         ns,
+	})
+}
+func (rt *reflectTest) TestAssignStructVals_withStructWithNamedAnonEmbeddedStructAnnotationOff() {
+
+	SetAnnotation(false)
+
+	type EmbeddedStruct struct {
+		Str string
+	}
+	type TestStruct struct {
+		EmbeddedStruct `db:"embedded"`
+		Int            int64
+		Bool           bool
+		Valuer         *sql.NullString
+	}
+	var ts TestStruct
+	cm, err := GetColumnMap(&ts)
+	fmt.Println(cm)
+	rt.NoError(err)
+	ns := &sql.NullString{String: "null_str1", Valid: true}
+	data := map[string]interface{}{
+		"embedded.str": "string",
+		"int":          int64(10),
+		"bool":         true,
+		"valuer":       &ns,
+	}
+	AssignStructVals(&ts, data, cm)
+	rt.Equal(ts, TestStruct{
+		EmbeddedStruct: EmbeddedStruct{Str: "string"},
+		Int:            10,
+		Bool:           true,
+		Valuer:         ns,
+	})
+}
+func (rt *reflectTest) TestAssignStructVals_StructWithNamedEmbeddedStructWithAnnotateTagAndAnnotationOff() {
+
+	SetAnnotation(false)
+
+	type EmbeddedStruct struct {
+		Str string
+	}
+	type TestStruct struct {
+		EmbeddedStruct EmbeddedStruct `db:"embedded,annotate"`
+		Int            int64
+		Bool           bool
+		Valuer         *sql.NullString
+	}
+	var ts TestStruct
+	cm, err := GetColumnMap(&ts)
+	rt.NoError(err)
+	ns := &sql.NullString{String: "null_str1", Valid: true}
+	data := map[string]interface{}{
+		"embedded.str": "string",
+		"int":          int64(10),
+		"bool":         true,
+		"valuer":       &ns,
+	}
+	AssignStructVals(&ts, data, cm)
+	rt.Equal(ts, TestStruct{
+		EmbeddedStruct: EmbeddedStruct{Str: "string"},
+		Int:            10,
+		Bool:           true,
+		Valuer:         ns,
+	})
+}
+
+// this test is for when you turn annotation off, maybe randomly, but checks to make sure that the
+// behavior of embedded tag is the same. Should do the exact same thing.
+func (rt *reflectTest) TestAssignStructVals_StructWithNamedEmbeddedStructWithEmbedTagAndAnnotationOff() {
+
+	SetAnnotation(false)
+
+	type EmbeddedStruct struct {
+		Str string
+	}
+	type TestStruct struct {
+		EmbeddedStruct EmbeddedStruct `db:"embedded,embed"`
+		Int            int64
+		Bool           bool
+		Valuer         *sql.NullString
+	}
+	var ts TestStruct
+	cm, err := GetColumnMap(&ts)
+	rt.NoError(err)
+	ns := &sql.NullString{String: "null_str1", Valid: true}
+	data := map[string]interface{}{
+		"embedded": &EmbeddedStruct{Str: "string"},
+		"int":      int64(10),
+		"bool":     true,
+		"valuer":   &ns,
+	}
+	AssignStructVals(&ts, data, cm)
+	rt.Equal(ts, TestStruct{
+		EmbeddedStruct: EmbeddedStruct{Str: "string"},
+		Int:            10,
+		Bool:           true,
+		Valuer:         ns,
+	})
+}
+func (rt *reflectTest) TestAssignStructVals_withStructWithNamedEmbeddedStructAnnotationOff() {
+
+	SetAnnotation(false)
+
+	type EmbeddedStruct struct {
+		Str string
+	}
+	type TestStruct struct {
+		EmbeddedStruct EmbeddedStruct `db:"embedded"`
+		Int            int64
+		Bool           bool
+		Valuer         *sql.NullString
+	}
+	var ts TestStruct
+	cm, err := GetColumnMap(&ts)
+	rt.NoError(err)
+	ns := &sql.NullString{String: "null_str1", Valid: true}
+	data := map[string]interface{}{
+		"embedded": &EmbeddedStruct{Str: "string"},
+		"int":      int64(10),
+		"bool":     true,
+		"valuer":   &ns,
+	}
+	AssignStructVals(&ts, data, cm)
+	rt.Equal(ts, TestStruct{
+		EmbeddedStruct: EmbeddedStruct{Str: "string"},
+		Int:            10,
+		Bool:           true,
+		Valuer:         ns,
+	})
+}
+
+func (rt *reflectTest) TestAssignStructVals_withStructWithUnNamedEmbeddedStructPointerAnnotationOff() {
+	SetAnnotation(false)
+
+	type EmbeddedStruct struct {
+		Str string
+	}
+	type TestStruct struct {
+		*EmbeddedStruct
+		Int    int64
+		Bool   bool
+		Valuer *sql.NullString
+	}
+	var ts TestStruct
+	cm, err := GetColumnMap(&ts)
+	rt.NoError(err)
+	ns := &sql.NullString{String: "null_str1", Valid: true}
+	data := map[string]interface{}{
+		"str":    "string",
+		"int":    int64(10),
+		"bool":   true,
+		"valuer": &ns,
+	}
+	AssignStructVals(&ts, data, cm)
+	rt.Equal(ts, TestStruct{
+		EmbeddedStruct: &EmbeddedStruct{Str: "string"},
+		Int:            10,
+		Bool:           true,
+		Valuer:         ns,
 	})
 }
 func (rt *reflectTest) TestAssignStructVals_withStructWithTaggedStructFieldOfAsIs() {

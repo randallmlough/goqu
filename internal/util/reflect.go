@@ -33,6 +33,7 @@ const (
 	omitEmptyTagName = "omitempty"
 	followTagName    = "follow"
 	embedTagName     = "embed"
+	annotateTagName  = "annotate"
 )
 
 var scannerType = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
@@ -109,6 +110,30 @@ func IsEmptyValue(v reflect.Value) bool {
 
 var structMapCache = make(map[interface{}]ColumnMap)
 var structMapCacheLock = sync.Mutex{}
+
+// annotate will annotate an embedded struct
+//
+// Example:
+// type EmbeddedStruct struct {
+//    String string
+// }
+// type Struct struct {
+//     TableOne EmbeddedStruct `db:"table_one"`
+// }
+//
+// Output: "table_one"."string"
+//
+// This is true by default
+// This can be changed by calling AnnotatedByDefault(bool)
+// from the main goqu package
+var annotate = true
+
+func SetAnnotation(anno bool) {
+	annotate = anno
+}
+func isAnnotated() bool {
+	return annotate
+}
 
 var defaultColumnRenameFunction = strings.ToLower
 var columnRenameFunction = defaultColumnRenameFunction
@@ -231,7 +256,11 @@ func createColumnMap(t reflect.Type, fieldIndex []int, prefixes []string) Column
 	for i := 0; i < n; i++ {
 		f := t.Field(i)
 		dbTag := tag.New("db", f.Tag)
-		if !dbTag.Skip() {
+		if !dbTag.Ignore() {
+			// get goqu tags if present
+			goquTag := tag.New("goqu", f.Tag).Values()
+			// merge dbTag options with goqu tags for more manageable tag handling
+			options := append(dbTag.Options(), goquTag...)
 			var columnName string
 
 			if !dbTag.IsNamed() {
@@ -240,21 +269,21 @@ func createColumnMap(t reflect.Type, fieldIndex []int, prefixes []string) Column
 				columnName = dbTag.Name()
 			}
 
-			if (dbTag.Has(followTagName) || f.Anonymous) && IsUnderlyingStruct(f.Type) {
+			if (f.Anonymous || options.Contains(followTagName)) && IsUnderlyingStruct(f.Type) {
 				subFieldIndexes := append(fieldIndex, f.Index...)
 
 				if f.Type.Kind() == reflect.Ptr {
 					f.Type = f.Type.Elem()
 				}
 
-				if dbTag.IsNamed() && !dbTag.Has(followTagName) {
+				if dbTag.IsNamed() && !options.Contains(followTagName) {
 					subPrefixes := append(prefixes, columnName)
 					subColMaps = append(subColMaps, createColumnMap(f.Type, subFieldIndexes, subPrefixes))
 				} else {
 					subColMaps = append(subColMaps, createColumnMap(f.Type, subFieldIndexes, prefixes))
 				}
 
-			} else if !implementsScanner(f.Type) && !dbTag.Has(embedTagName) {
+			} else if !implementsScanner(f.Type) && (isAnnotated() || options.Contains(annotateTagName)) && !options.Contains(embedTagName) {
 				subFieldIndexes := append(fieldIndex, f.Index...)
 				subPrefixes := append(prefixes, columnName)
 				var subCm ColumnMap
@@ -269,15 +298,14 @@ func createColumnMap(t reflect.Type, fieldIndex []int, prefixes []string) Column
 				}
 			} else if f.PkgPath == "" {
 				// if PkgPath is empty then it is an exported field
-				goquTag := tag.New("goqu", f.Tag)
 				columnName = strings.Join(append(prefixes, columnName), ".")
 				cm[columnName] = ColumnData{
 					ColumnName:     columnName,
-					ShouldInsert:   !(dbTag.Has(skipInsertTagName) || goquTag.Values().Contains(skipInsertTagName)),
-					ShouldUpdate:   !(dbTag.Has(skipUpdateTagName) || goquTag.Values().Contains(skipUpdateTagName)),
-					DefaultIfEmpty: dbTag.Has(defaultIfEmptyTagName) || goquTag.Values().Contains(defaultIfEmptyTagName),
-					Omitempty:      dbTag.Has(omitEmptyTagName),
-					Embed:          dbTag.Has(embedTagName),
+					ShouldInsert:   !options.Contains(skipInsertTagName),
+					ShouldUpdate:   !options.Contains(skipUpdateTagName),
+					DefaultIfEmpty: options.Contains(defaultIfEmptyTagName),
+					Omitempty:      options.Contains(omitEmptyTagName),
+					Embed:          options.Contains(embedTagName),
 					FieldIndex:     append(fieldIndex, f.Index...),
 					GoType:         f.Type,
 				}

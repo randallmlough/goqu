@@ -72,6 +72,11 @@ func SetColumnRenameFunction(renameFunc func(string) string) {
 	util.SetColumnRenameFunction(renameFunc)
 }
 
+// AnnotateByDefault sets the default annotation setting
+func AnnotateByDefault(annotate bool) {
+	util.SetAnnotation(annotate)
+}
+
 // Set the location to use when interpolating time.Time instances. See https://golang.org/pkg/time/#LoadLocation
 // NOTE: This has no effect when using prepared statements.
 func SetTimeLocation(loc *time.Location) {
