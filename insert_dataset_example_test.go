@@ -514,6 +514,45 @@ func ExampleInsertDataset_Rows_withEmbeddedValuesPrepared() {
 	// Output:
 	// INSERT INTO "user" ("address", "best_friends", "crud", "firstname", "lastname", "map") VALUES (?, ?, ?, ?, ?, ?) [{555 random road strange city} [jane smith john doe] [true true false true] Greg Farley map[key:value number:5]]
 }
+func ExampleInsertDataset_Rows_withEmbeddedValuesPreparedNotateOff() {
+	goqu.NotateByDefault(false)
+	type Address struct {
+		Line1 string
+		City  string
+	}
+	type User struct {
+		FirstName        string
+		LastName         string
+		BestFriends      []string `db:"best_friends"`
+		FavoriteIceCream []string `db:"favorite_ice_cream,omitempty"`
+		CRUD             []bool   `db:"crud"`
+		Address          Address
+		Map              map[string]interface{} `db:"map"`
+	}
+	ds := goqu.Insert("user").Rows(
+		User{
+			FirstName:   "Greg",
+			LastName:    "Farley",
+			BestFriends: []string{"jane smith", "john doe"},
+			CRUD:        []bool{true, true, false, true},
+			Address: Address{
+				Line1: "555 random road",
+				City:  "strange city",
+			},
+			Map: map[string]interface{}{
+				"key":    "value",
+				"number": 5,
+			},
+		},
+	)
+	insertSQL, args, _ := ds.Prepared(true).ToSQL()
+	fmt.Println(insertSQL, args)
+
+	goqu.NotateByDefault(true)
+
+	// Output:
+	// INSERT INTO "user" ("address", "best_friends", "crud", "firstname", "lastname", "map") VALUES (?, ?, ?, ?, ?, ?) [{555 random road strange city} [jane smith john doe] [true true false true] Greg Farley map[key:value number:5]]
+}
 func ExampleInsertDataset_Rows_withIgnoredEmbedded() {
 	type Address struct {
 		Street string

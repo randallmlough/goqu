@@ -2,7 +2,6 @@ package util
 
 import (
 	"database/sql"
-	"fmt"
 	"reflect"
 	"strings"
 	"sync"
@@ -85,7 +84,7 @@ func (t TestInterfaceImpl) A() string {
 }
 func (rt *reflectTest) SetupTest() {
 	// reset the default annotation before each test
-	SetAnnotation(true)
+	DotNotate(true)
 }
 
 type reflectTest struct {
@@ -824,7 +823,7 @@ func (rt *reflectTest) TestAssignStructVals_withStructWithTaggedPointerField() {
 }
 func (rt *reflectTest) TestAssignStructVals_withStructWithAnonEmbeddedStructAnnotationOff() {
 
-	SetAnnotation(false)
+	DotNotate(false)
 
 	type EmbeddedStruct struct {
 		Str string
@@ -855,7 +854,7 @@ func (rt *reflectTest) TestAssignStructVals_withStructWithAnonEmbeddedStructAnno
 }
 func (rt *reflectTest) TestAssignStructVals_withStructWithNamedAnonEmbeddedStructAnnotationOff() {
 
-	SetAnnotation(false)
+	DotNotate(false)
 
 	type EmbeddedStruct struct {
 		Str string
@@ -868,7 +867,6 @@ func (rt *reflectTest) TestAssignStructVals_withStructWithNamedAnonEmbeddedStruc
 	}
 	var ts TestStruct
 	cm, err := GetColumnMap(&ts)
-	fmt.Println(cm)
 	rt.NoError(err)
 	ns := &sql.NullString{String: "null_str1", Valid: true}
 	data := map[string]interface{}{
@@ -885,15 +883,15 @@ func (rt *reflectTest) TestAssignStructVals_withStructWithNamedAnonEmbeddedStruc
 		Valuer:         ns,
 	})
 }
-func (rt *reflectTest) TestAssignStructVals_StructWithNamedEmbeddedStructWithAnnotateTagAndAnnotationOff() {
+func (rt *reflectTest) TestAssignStructVals_StructWithNamedEmbeddedStructWithNotateTagAndAnnotationOff() {
 
-	SetAnnotation(false)
+	DotNotate(false)
 
 	type EmbeddedStruct struct {
 		Str string
 	}
 	type TestStruct struct {
-		EmbeddedStruct EmbeddedStruct `db:"embedded,annotate"`
+		EmbeddedStruct EmbeddedStruct `db:"embedded,notate"`
 		Int            int64
 		Bool           bool
 		Valuer         *sql.NullString
@@ -921,7 +919,7 @@ func (rt *reflectTest) TestAssignStructVals_StructWithNamedEmbeddedStructWithAnn
 // behavior of embedded tag is the same. Should do the exact same thing.
 func (rt *reflectTest) TestAssignStructVals_StructWithNamedEmbeddedStructWithEmbedTagAndAnnotationOff() {
 
-	SetAnnotation(false)
+	DotNotate(false)
 
 	type EmbeddedStruct struct {
 		Str string
@@ -952,7 +950,7 @@ func (rt *reflectTest) TestAssignStructVals_StructWithNamedEmbeddedStructWithEmb
 }
 func (rt *reflectTest) TestAssignStructVals_withStructWithNamedEmbeddedStructAnnotationOff() {
 
-	SetAnnotation(false)
+	DotNotate(false)
 
 	type EmbeddedStruct struct {
 		Str string
@@ -983,7 +981,7 @@ func (rt *reflectTest) TestAssignStructVals_withStructWithNamedEmbeddedStructAnn
 }
 
 func (rt *reflectTest) TestAssignStructVals_withStructWithUnNamedEmbeddedStructPointerAnnotationOff() {
-	SetAnnotation(false)
+	DotNotate(false)
 
 	type EmbeddedStruct struct {
 		Str string

@@ -33,7 +33,7 @@ const (
 	omitEmptyTagName = "omitempty"
 	followTagName    = "follow"
 	embedTagName     = "embed"
-	annotateTagName  = "annotate"
+	notateTagName    = "notate"
 )
 
 var scannerType = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
@@ -111,7 +111,7 @@ func IsEmptyValue(v reflect.Value) bool {
 var structMapCache = make(map[interface{}]ColumnMap)
 var structMapCacheLock = sync.Mutex{}
 
-// annotate will annotate an embedded struct
+// dotNotate will dot notate an embedded struct
 //
 // Example:
 // type EmbeddedStruct struct {
@@ -124,15 +124,15 @@ var structMapCacheLock = sync.Mutex{}
 // Output: "table_one"."string"
 //
 // This is true by default
-// This can be changed by calling AnnotatedByDefault(bool)
+// This can be changed by calling NotateByDefault(bool)
 // from the main goqu package
-var annotate = true
+var dotNotate = true
 
-func SetAnnotation(anno bool) {
-	annotate = anno
+func DotNotate(notate bool) {
+	dotNotate = notate
 }
-func isAnnotated() bool {
-	return annotate
+func isDotNotated() bool {
+	return dotNotate
 }
 
 var defaultColumnRenameFunction = strings.ToLower
@@ -283,7 +283,7 @@ func createColumnMap(t reflect.Type, fieldIndex []int, prefixes []string) Column
 					subColMaps = append(subColMaps, createColumnMap(f.Type, subFieldIndexes, prefixes))
 				}
 
-			} else if !implementsScanner(f.Type) && (isAnnotated() || options.Contains(annotateTagName)) && !options.Contains(embedTagName) {
+			} else if !implementsScanner(f.Type) && (isDotNotated() || options.Contains(notateTagName)) && !options.Contains(embedTagName) {
 				subFieldIndexes := append(fieldIndex, f.Index...)
 				subPrefixes := append(prefixes, columnName)
 				var subCm ColumnMap
@@ -305,7 +305,7 @@ func createColumnMap(t reflect.Type, fieldIndex []int, prefixes []string) Column
 					ShouldUpdate:   !options.Contains(skipUpdateTagName),
 					DefaultIfEmpty: options.Contains(defaultIfEmptyTagName),
 					Omitempty:      options.Contains(omitEmptyTagName),
-					Embed:          options.Contains(embedTagName),
+					Embed:          options.Contains(embedTagName) || !isDotNotated(),
 					FieldIndex:     append(fieldIndex, f.Index...),
 					GoType:         f.Type,
 				}
